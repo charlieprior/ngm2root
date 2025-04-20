@@ -104,7 +104,8 @@ int main(int argc, char *argv[]) {
             }
             // if the output path is a directory, generate the output file name
             // by appending the input file name to the output path
-            outfileName = path / inputFilename.filename().replace_extension(".root");
+            outfileName = path / inputFilename.filename();
+            outfileName.replace_extension(".root");
         } else {
             // check parent directory exists
             if (!fs::exists(path.parent_path())) {
@@ -116,7 +117,8 @@ int main(int argc, char *argv[]) {
     } else {
         // if the output path is not specified, generate the output file name
         // by replacing the input file extension with .root
-        outfileName = inputFilename.replace_extension(".root");
+        outfileName = inputFilename;
+        outfileName.replace_extension(".root");
     }
 
     if (!clobber && fs::exists(outfileName)) {
