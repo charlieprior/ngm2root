@@ -11,16 +11,15 @@
 //  this converter is meant to translate an NGM-binary file into a ROOT version
 //  no analysis is performed, no data is removed except for NGM headers
 
-//#include <stdio.h>
 #include <iostream>
 #include <string>
-#include <sstream>
 #include <fstream>
 #include <filesystem>
 #include <chrono>
 #include <cstdint>
 
 #include <argparse/argparse.hpp>
+// #include <boost/sort/sort.hpp>
 
 #include "TFile.h"
 #include "TTree.h"
@@ -70,7 +69,7 @@ int main(int argc, char *argv[]) {
             .implicit_value(true)
             .store_into(quiet);
 
-    program.add_argument("-c", "--clobber")
+    program.add_argument("-f", "--clobber")
             .help("overwrite output file if it exists")
             .default_value(false)
             .implicit_value(true)
@@ -130,13 +129,13 @@ int main(int argc, char *argv[]) {
         std::cout << "Writing file to " << outfileName << std::endl;
     }
 
-    std::string baseName = inputFilename.filename().replace_extension().string();
+    auto baseName = inputFilename.filename().replace_extension().string();
 
     //	Create the output file and TTree
+    uint16_t channelID;
     uint64_t timestamp;
     uint16_t peakHighIndex;
     uint16_t peakHighValue;
-    uint16_t channelID;
     uint8_t formatBits;
     uint32_t accumulatorSum[8];
     uint8_t informationBits;
@@ -156,7 +155,7 @@ int main(int argc, char *argv[]) {
     uint32_t tmpWord;
 
     std::unique_ptr<TFile> outFile(TFile::Open(outfileName.c_str(), "RECREATE", baseName.c_str()));
-    auto unsortedTree = new TTree("unsortedTree", baseName.c_str());
+    auto unsortedTree = new TTree("unsortedTree", baseName.c_str()); // doesn't seem to work with c++ pointers
     unsortedTree->SetDirectory(nullptr);
 
     unsortedTree->Branch("ch", &channelID, "ch/s");
@@ -193,7 +192,7 @@ int main(int argc, char *argv[]) {
     //Get size of file, from:
     //https://stackoverflow.com/questions/2409504/using-c-filestreams-fstream-how-can-you-determine-the-size-of-a-file
     inFile.ignore(std::numeric_limits<std::streamsize>::max());
-    std::streamsize bitsInFile = inFile.gcount();
+    auto bitsInFile = inFile.gcount();
     inFile.clear();
     inFile.seekg(0, std::ios_base::beg);
 
@@ -380,7 +379,7 @@ int main(int argc, char *argv[]) {
                         return 1;
                     }
 
-                    for (int i = 0; i < (nSamples / 2); i++) {
+                    for (uint32_t i = 0; i < (nSamples / 2); i++) {
                         inFile.read(reinterpret_cast<char*>(&tmpWord), 4); packetWords -= 1;
                         waveform[i * 2] = tmpWord & 0xffff;
                         waveform[i * 2 + 1] = (tmpWord & 0xffff0000) >> 16;
@@ -438,7 +437,7 @@ int main(int argc, char *argv[]) {
     }
 
     unsortedTree->Delete();
-    finalTree->Write("sis3316tree", TObject::kOverwrite);
+    finalTree->Write("t", TObject::kOverwrite);
     outFile->Close();
     inFile.close();
 
